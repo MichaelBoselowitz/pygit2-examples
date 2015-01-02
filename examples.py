@@ -15,7 +15,7 @@ LOCAL_REPO = 'local_repo'
 # Cleanup
 if os.path.exists(LOCAL_REPO):
     shutil.rmtree(LOCAL_REPO)
-    
+
 if os.path.exists(REMOTE_REPO):
     shutil.rmtree(REMOTE_REPO)
 
@@ -25,20 +25,21 @@ def create_commits(repo, how_many):
         parent = []
     else:
         parent = [repo.head.target]
-    
+
     global version
     for i in range(how_many):
-        test_fp = open(os.path.join(repo.workdir, 'test.txt'), 'w')
-        test_fp.write('Version %d.\n' % (version))
-        repo.index.add(os.path.basename(test_fp.name))
+        test_fp = open(os.path.join(repo.workdir,
+                                    os.path.basename(os.path.normpath(repo.workdir)) + '_test.txt'), 'a+')
+        test_fp.write('Version %d.\n\n' % (version))
         test_fp.close()
+        repo.index.add_all()
 
         user = repo.default_signature
         tree = repo.index.write_tree()
         commit = repo.create_commit('HEAD',
                                     user,
                                     user,
-                                    'Version %d of test.txt' % (version),
+                                    'Version %d of test.txt on %s' % (version, os.path.basename(os.path.normpath(repo.workdir))),
                                     tree,
                                     parent)
         parent = [commit]
@@ -47,53 +48,22 @@ def create_commits(repo, how_many):
 # Repo init
 # Initialize new remote repo
 remote_repo = pygit2.init_repository(REMOTE_REPO, False)
-create_commits(remote_repo, 3)
-
+create_commits(remote_repo, 1)
 
 # Clone local repo
 local_repo = pygit2.clone_repository(REMOTE_REPO,
                                      LOCAL_REPO)
 
 # Repo pull fastforwardable
-create_commits(remote_repo, 2)
-for remote in local_repo.remotes:
-    if remote.name == 'origin':
-        remote.fetch()
-        remote_master_id = local_repo.lookup_reference('refs/remotes/origin/master').target
-        merge_result, _ = local_repo.merge_analysis(remote_master_id)
-        # We can just fastforward
-        if merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
-            local_repo.head.set_target(remote_master_id)
-            local_repo.checkout_head()
-        else:
-            print 'Should _not_ be here'
+create_commits(remote_repo, 1)
+pull(local_repo)
 
 # Repo pull merge necessary
-create_commits(remote_repo, 1)
-create_commits(local_repo, 1)
-for remote in local_repo.remotes:
-    if remote.name == 'origin':
-        remote.fetch()
-        remote_master_id = local_repo.lookup_reference('refs/remotes/origin/master').target
-        merge_result, _ = local_repo.merge_analysis(remote_master_id)
-        # We can just fastforward
-        if merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-            local_repo.merge(remote_master_id)
-            if local_repo.index.conflicts is not None:
-                print 'Oh fuck.'
-                sys.exit(-1)
+# create_commits(local_repo, 1)
+# create_commits(remote_repo, 1)
 
-            user = local_repo.default_signature
-            tree = local_repo.index.write_tree()
-            commit = local_repo.create_commit('HEAD',
-                                              user,
-                                              user,
-                                              'Merge!',
-                                              tree,
-                                              [local_repo.head.target, remote_master_id])
-        else:
-            print 'Should _not_ be here'
-        
+# pull(local_repo)
+
 
 # Repo push
 
