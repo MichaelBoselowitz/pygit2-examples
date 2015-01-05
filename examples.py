@@ -10,7 +10,9 @@ CREDENTIALS = pygit2.credentials.Keypair('git',
                                          SSH_KEY_PRIVATE,
                                          None)
 REMOTE_REPO = 'remote_repo'
-LOCAL_REPO = 'local_repo'
+LOCAL_REPO_1 = 'local_repo_1'
+LOCAL_REPO_2 = 'local_repo_2'
+
 
 version = 1
 def create_commits(repo, how_many):
@@ -46,11 +48,11 @@ def create_commits(repo, how_many):
         version += 1
 
 
-def pull(repo, remote_name='origin'):
+def pull(repo, remote_name='origin', branch='master'):
     for remote in repo.remotes:
         if remote.name == remote_name:
             remote.fetch()
-            remote_master_id = repo.lookup_reference('refs/remotes/origin/master').target
+            remote_master_id = repo.lookup_reference('refs/remotes/origin/%s' % (branch)).target
             merge_result, _ = repo.merge_analysis(remote_master_id)
             # Up to date, do nothing
             if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
@@ -58,8 +60,11 @@ def pull(repo, remote_name='origin'):
             # We can just fastforward
             elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
                 repo.checkout_tree(repo.get(remote_master_id))
-                master_ref = repo.lookup_reference('refs/heads/master')
-                master_ref.set_target(remote_master_id)
+                try:
+                    master_ref = repo.lookup_reference('refs/heads/%s' % (branch))
+                    master_ref.set_target(remote_master_id)
+                except KeyError:
+                    repo.create_branch(branch, repo.get(remote_master_id))
                 repo.head.set_target(remote_master_id)
             elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
                 repo.merge(remote_master_id)
@@ -83,33 +88,44 @@ def pull(repo, remote_name='origin'):
                 raise AssertionError('Unknown merge analysis result')
 
 
+def push(repo, remote_name='origin', ref='refs/heads/master:refs/heads/master'):
+    for remote in repo.remotes:
+        if remote.name == remote_name:
+            remote.push(ref)
+
+
 if __name__ == '__main__':
     # Cleanup
-    if os.path.exists(LOCAL_REPO):
-        shutil.rmtree(LOCAL_REPO)
+    if os.path.exists(LOCAL_REPO_1):
+        shutil.rmtree(LOCAL_REPO_1)
+
+    if os.path.exists(LOCAL_REPO_2):
+        shutil.rmtree(LOCAL_REPO_2)
 
     if os.path.exists(REMOTE_REPO):
         shutil.rmtree(REMOTE_REPO)
 
-
     # Initialize new remote repo
-    remote_repo = pygit2.init_repository(REMOTE_REPO, False)
-    create_commits(remote_repo, 1)
+    remote_repo = pygit2.init_repository(REMOTE_REPO, True)
 
     # Clone local repo
-    local_repo = pygit2.clone_repository(REMOTE_REPO,
-                                         LOCAL_REPO)
+    local_repo_1 = pygit2.clone_repository(REMOTE_REPO,
+                                           LOCAL_REPO_1)
+    local_repo_2 = pygit2.clone_repository(REMOTE_REPO,
+                                           LOCAL_REPO_2)
 
     # Repo pull fastforwardable
-    create_commits(remote_repo, 1)
-    pull(local_repo)
+    create_commits(local_repo_1, 1)
+    push(local_repo_1)
+    pull(local_repo_2)
 
     # Repo pull merge necessary
-    create_commits(local_repo, 1)
-    create_commits(remote_repo, 1)
-    pull(local_repo)
-
-    # Repo push
+    create_commits(local_repo_1, 1)
+    create_commits(local_repo_2, 1)
+    push(local_repo_1)
+    pull(local_repo_2)
+    push(local_repo_2)
+    pull(local_repo_1)
 
     # Create commit
 

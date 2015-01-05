@@ -54,5 +54,6 @@ docs/_build/
 target/
 
 # Custom
-local_repo
+local_repo_1
+local_repo_2
 remote_repo
