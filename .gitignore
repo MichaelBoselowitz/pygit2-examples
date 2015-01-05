@@ -54,6 +54,8 @@ docs/_build/
 target/
 
 # Custom
+.DS_Store
 local_repo_1
 local_repo_2
 remote_repo
+*.zip

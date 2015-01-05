@@ -1,7 +1,10 @@
+import io
 import os
 import sys
 import shutil
 import pygit2
+import zipfile
+import datetime
 
 SSH_KEY_PUBLIC = os.path.expanduser('~/.ssh/id_rsa.pub')
 SSH_KEY_PRIVATE = os.path.expanduser('~/.ssh/id_rsa_unencrypted')
@@ -94,6 +97,27 @@ def push(repo, remote_name='origin', ref='refs/heads/master:refs/heads/master'):
             remote.push(ref)
 
 
+def archive_head(repo, out=None):
+    commit = repo.get(repo.head.target)
+    timestamp = datetime.datetime.fromtimestamp(commit.commit_time)
+    tree = commit.peel(pygit2.Tree)
+
+    if out is None:
+        out = '%s.zip' % (commit.id.hex[:8])
+
+    if not timestamp:
+        timestamp = datetime.datetime.now()
+
+    index = pygit2.Index()
+    index.read_tree(tree)
+
+    zip_file = zipfile.ZipFile(out, 'w')
+    for entry in index:
+        info = zipfile.ZipInfo(entry.path, timestamp.timetuple())
+        content = repo.get(entry.id).read_raw()
+        zip_file.writestr(info, content)
+
+
 if __name__ == '__main__':
     # Cleanup
     if os.path.exists(LOCAL_REPO_1):
@@ -127,8 +151,8 @@ if __name__ == '__main__':
     push(local_repo_2)
     pull(local_repo_1)
 
-    # Create commit
-
     # Export files
+    archive_head(local_repo_1)
 
-    # Merge Conficts?
+    # TODO:
+    #   - Merge conflict resolution.
