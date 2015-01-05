@@ -21,7 +21,8 @@ def create_commits(repo, how_many):
     global version
     for i in range(how_many):
         test_fp = open(os.path.join(repo.workdir,
-                                    os.path.basename(os.path.normpath(repo.workdir)) + '_test.txt'), 'a+')
+                                    os.path.basename(
+                                        os.path.normpath(repo.workdir)) + '_test.txt'), 'a+')
         print 'Writing to %s on %s repo' % (test_fp.name, repo)
         test_fp.write('Version %d.\n' % (version))
         # Make sure it was written to disk before moving on.
@@ -62,9 +63,12 @@ def pull(repo, remote_name='origin'):
                 repo.head.set_target(remote_master_id)
             elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
                 repo.merge(remote_master_id)
-                print repo.index.conflicts
 
-                assert repo.index.conflicts is None, 'Conflicts, ahhhh!'
+                if repo.index.conflicts is not None:
+                    for conflict in repo.index.conflicts:
+                        print 'Conflicts found in:', conflict[0].path
+                    raise AssertionError('Conflicts, ahhhhh!!')
+
                 user = repo.default_signature
                 tree = repo.index.write_tree()
                 commit = repo.create_commit('HEAD',
@@ -73,6 +77,7 @@ def pull(repo, remote_name='origin'):
                                             'Merge!',
                                             tree,
                                             [repo.head.target, remote_master_id])
+                # We need to do this or git CLI will think we are still merging.
                 repo.state_cleanup()
             else:
                 raise AssertionError('Unknown merge analysis result')
@@ -100,11 +105,9 @@ if __name__ == '__main__':
     pull(local_repo)
 
     # Repo pull merge necessary
-    # create_commits(local_repo, 1)
-    # create_commits(remote_repo, 1)
-
-    # pull(local_repo)
-
+    create_commits(local_repo, 1)
+    create_commits(remote_repo, 1)
+    pull(local_repo)
 
     # Repo push
 
