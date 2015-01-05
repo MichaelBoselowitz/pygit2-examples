@@ -56,10 +56,10 @@ def pull(repo, remote_name='origin'):
                 return
             # We can just fastforward
             elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+                repo.checkout_tree(repo.get(remote_master_id))
                 master_ref = repo.lookup_reference('refs/heads/master')
                 master_ref.set_target(remote_master_id)
-                # Terrible hack to fix set_target() screwing with the index
-                repo.reset(master_ref.target, pygit2.GIT_RESET_HARD)
+                repo.head.set_target(remote_master_id)
             elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
                 repo.merge(remote_master_id)
                 print repo.index.conflicts
