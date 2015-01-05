@@ -18,13 +18,15 @@ def create_commits(repo, how_many):
         parent = []
     else:
         parent = [repo.head.target]
-
     global version
     for i in range(how_many):
         test_fp = open(os.path.join(repo.workdir,
                                     os.path.basename(os.path.normpath(repo.workdir)) + '_test.txt'), 'a+')
-        print 'Writing %s to %s on %s repo' % ('Version %d.\n' % (version), test_fp.name, repo)
-        test_fp.write('Version %d.\n\n' % (version))
+        print 'Writing to %s on %s repo' % (test_fp.name, repo)
+        test_fp.write('Version %d.\n' % (version))
+        # Make sure it was written to disk before moving on.
+        test_fp.flush()
+        os.fsync(test_fp.fileno())
         test_fp.close()
         repo.index.add_all()
 
@@ -36,6 +38,9 @@ def create_commits(repo, how_many):
                                     'Version %d of test.txt on %s' % (version, os.path.basename(os.path.normpath(repo.workdir))),
                                     tree,
                                     parent)
+        # Apparently the index needs to be written after a write tree to clean it up.
+        # https://github.com/libgit2/pygit2/issues/370
+        repo.index.write()
         parent = [commit]
         version += 1
 
