@@ -12,13 +12,6 @@ CREDENTIALS = pygit2.credentials.Keypair('git',
 REMOTE_REPO = 'remote_repo'
 LOCAL_REPO = 'local_repo'
 
-# Cleanup
-if os.path.exists(LOCAL_REPO):
-    shutil.rmtree(LOCAL_REPO)
-
-if os.path.exists(REMOTE_REPO):
-    shutil.rmtree(REMOTE_REPO)
-
 version = 1
 def create_commits(repo, how_many):
     if repo.head_is_unborn:
@@ -79,29 +72,39 @@ def pull(repo, remote_name='origin'):
             else:
                 raise AssertionError('Unknown merge analysis result')
 
-# Initialize new remote repo
-remote_repo = pygit2.init_repository(REMOTE_REPO, False)
-create_commits(remote_repo, 1)
 
-# Clone local repo
-local_repo = pygit2.clone_repository(REMOTE_REPO,
-                                     LOCAL_REPO)
+if __name__ == '__main__':
+    # Cleanup
+    if os.path.exists(LOCAL_REPO):
+        shutil.rmtree(LOCAL_REPO)
 
-# Repo pull fastforwardable
-create_commits(remote_repo, 1)
-pull(local_repo)
-
-# Repo pull merge necessary
-# create_commits(local_repo, 1)
-# create_commits(remote_repo, 1)
-
-# pull(local_repo)
+    if os.path.exists(REMOTE_REPO):
+        shutil.rmtree(REMOTE_REPO)
 
 
-# Repo push
+    # Initialize new remote repo
+    remote_repo = pygit2.init_repository(REMOTE_REPO, False)
+    create_commits(remote_repo, 1)
 
-# Create commit
+    # Clone local repo
+    local_repo = pygit2.clone_repository(REMOTE_REPO,
+                                         LOCAL_REPO)
 
-# Export files
+    # Repo pull fastforwardable
+    create_commits(remote_repo, 1)
+    pull(local_repo)
 
-# Merge Conficts?
+    # Repo pull merge necessary
+    # create_commits(local_repo, 1)
+    # create_commits(remote_repo, 1)
+
+    # pull(local_repo)
+
+
+    # Repo push
+
+    # Create commit
+
+    # Export files
+
+    # Merge Conficts?
